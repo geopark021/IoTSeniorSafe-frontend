@@ -1,6 +1,6 @@
 import { createGlobalStyle } from 'styled-components';
 
-// 글꼴 폰트를 위한 글로벌 스타일
+// NanumSquareRound 폰트를 위한 글로벌 스타일
 const GlobalStyle = createGlobalStyle`
   @font-face {
     font-family: 'NanumSquareRound';
@@ -30,10 +30,16 @@ const GlobalStyle = createGlobalStyle`
     font-style: normal;
   }
 
-  body {
+  html, body {
     font-family: 'NanumSquareRound', sans-serif;
     margin: 0;
     padding: 0;
+    overflow: hidden; // 기본 스크롤 숨기기
+    height: 100%; // 전체 높이를 100%로 지정
+  }
+
+  #root {
+    height: 100%; // 루트 요소도 전체 높이로 설정
   }
 `;
 
