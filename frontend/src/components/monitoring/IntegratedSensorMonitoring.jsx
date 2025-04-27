@@ -381,7 +381,7 @@ function IntegratedSensorMonitoring() {
       <TableContainer>
         <Table>
           <colgroup>
-            <col style={{ width: '40px' }} /> {/* 번호 */}
+            <col style={{ width: '50px' }} /> {/* 번호 */}
             <col style={{ width: '60px' }} /> {/* 이름 - 가로 간격 줄임 */}
             <col style={{ width: '120px' }} /> {/* 연락처 */}
             <col style={{ width: '180px' }} /> {/* 주소 */}
@@ -396,7 +396,7 @@ function IntegratedSensorMonitoring() {
           </colgroup>
           <thead>
             <tr>
-              <Th>번호</Th>
+              <Th>No</Th>
               <Th>이름</Th>
               <Th>연락처</Th>
               <Th>주소</Th>
