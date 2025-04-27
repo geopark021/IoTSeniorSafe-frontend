@@ -382,7 +382,7 @@ function IntegratedSensorMonitoring() {
         <Table>
           <colgroup>
             <col style={{ width: '50px' }} /> {/* 번호 */}
-            <col style={{ width: '60px' }} /> {/* 이름 - 가로 간격 줄임 */}
+            <col style={{ width: '60px' }} /> {/* 이름  */}
             <col style={{ width: '120px' }} /> {/* 연락처 */}
             <col style={{ width: '180px' }} /> {/* 주소 */}
             <col style={{ width: '70px' }} /> {/* 담당자 */}
@@ -391,7 +391,7 @@ function IntegratedSensorMonitoring() {
             <col style={{ width: '50px' }} /> {/* 거실 */}
             <col style={{ width: '50px' }} /> {/* 주방 */}
             <col style={{ width: '50px' }} /> {/* 현관 */}
-            <col style={{ width: '100px' }} /> {/* 마지막 활동시간 */}
+            <col style={{ width: '110px' }} /> {/* 마지막 활동시간 */}
             <col style={{ width: '140px' }} /> {/* 상태/메세지 */}
           </colgroup>
           <thead>
