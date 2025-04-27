@@ -1,4 +1,3 @@
-// src/components/Sidebar.jsx
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import styled from 'styled-components';
@@ -7,58 +6,92 @@ import dashboardIcon from '../assets/icons/dashboard-btn-icon-unclick.png';
 import monitoringIcon from '../assets/icons/monitoring-icon-unclick.png';
 import aiIcon from '../assets/icons/ai-reporting-icon-unclick.png';
 import iotIcon from '../assets/icons/iot-icon-unclick.png';
-import loginIcon from '../assets/icons/login-icon-click.png';
+import logoutIcon from '../assets/icons/logout-icon-unclick.png';
 
+// 사이드바 컨테이너 스타일
 const SidebarContainer = styled.aside`
   width: 100px;
-  background-color: #ffffff;
+  min-width: 100px;
+  max-width: 100px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1rem 0;
+  height: 100vh;
+  padding: 2rem 0;
 
-  row-gap: 1rem; /* 세로 간격만 1rem 적용 */
-  column-gap: 0; /* 가로 간격은 0 */
-  height: 100vh;
-  padding-top: 1rem;
-  padding-bottom: 1rem;
-  height: 100vh;
+  border: 1px solid #e8e7e7;
+  background: #fff;
+  box-shadow: 0px 1px 50px 0px rgba(0, 0, 0, 0.08);
+  font-family: 'NanumSquareRound', sans-serif;
 `;
 
-const IconWrapper = styled(NavLink)`
-  margin: 1rem 0;
-  width: 32px;
-  height: 32px;
+// 메뉴 아이템 컨테이너
+const MenuItem = styled(NavLink)`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 12px 0;
+  text-decoration: none;
+  color: #666;
+  margin-bottom: 10px;
 
   &.active {
-    filter: brightness(0.8);
+    color: #333;
+
+    img {
+      filter: brightness(0.8);
+    }
+  }
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.02);
   }
 `;
 
+// 아이콘 이미지 스타일
 const IconImg = styled.img`
-  width: 100%;
-  height: 100%;
-  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  margin-bottom: 8px;
+`;
+
+// 메뉴 텍스트 스타일 - 나눔스퀘어라운드 폰트 적용
+const MenuText = styled.span`
+  font-size: 12px;
+  font-weight: 700; /* NanumSquareRoundB 굵기 */
+  text-align: center;
+  font-family: 'NanumSquareRound', sans-serif;
 `;
 
 function Sidebar() {
   return (
     <SidebarContainer>
-      <IconWrapper to="/dashboard">
-        <IconImg src={dashboardIcon} alt="Dashboard" />
-      </IconWrapper>
-      <IconWrapper to="/monitoring">
-        <IconImg src={monitoringIcon} alt="Monitoring" />
-      </IconWrapper>
-      <IconWrapper to="/ai">
-        <IconImg src={aiIcon} alt="AI Reporting" />
-      </IconWrapper>
-      <IconWrapper to="/iot">
-        <IconImg src={iotIcon} alt="IoT Manage" />
-      </IconWrapper>
-      <IconWrapper to="/login">
-        <IconImg src={loginIcon} alt="Login" />
-      </IconWrapper>
+      <MenuItem to="/dashboard">
+        <IconImg src={dashboardIcon} alt="대시보드" />
+        <MenuText>대시보드</MenuText>
+      </MenuItem>
+
+      <MenuItem to="/monitoring">
+        <IconImg src={monitoringIcon} alt="모니터링" />
+        <MenuText>모니터링</MenuText>
+      </MenuItem>
+
+      <MenuItem to="/ai">
+        <IconImg src={aiIcon} alt="AI 리포팅" />
+        <MenuText>AI 리포팅</MenuText>
+      </MenuItem>
+
+      <MenuItem to="/iot">
+        <IconImg src={iotIcon} alt="IoT 관리" />
+        <MenuText>IoT 관리</MenuText>
+      </MenuItem>
+
+      <MenuItem to="/logout">
+        <IconImg src={logoutIcon} alt="로그아웃" />
+        <MenuText>로그아웃</MenuText>
+      </MenuItem>
     </SidebarContainer>
   );
 }

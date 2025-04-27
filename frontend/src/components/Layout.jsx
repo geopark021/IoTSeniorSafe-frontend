@@ -1,34 +1,29 @@
-// src/components/Layout.jsx
 import React from 'react';
+import { Outlet } from 'react-router-dom';
 import styled from 'styled-components';
 import Sidebar from './Sidebar';
-import { Outlet } from 'react-router-dom';
 
-const Container = styled.div`
+const LayoutContainer = styled.div`
   display: flex;
+  width: 100%;
   height: 100vh;
-  background-color: #f9f9f9;
-
-  border: 1px solid #e8e7e7;
-  background: #fff;
-  box-shadow: 0px 1px 50px 0px rgba(0, 0, 0, 0.08);
 `;
 
-const ContentArea = styled.div`
+const MainContent = styled.main`
   flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  padding: 2rem;
+  background-color: #f9f9f9;
+  overflow-y: auto;
 `;
 
 function Layout() {
   return (
-    <Container>
+    <LayoutContainer>
       <Sidebar />
-      <ContentArea>
-        <Outlet /> {/* 라우트에 따라 Login, Dashboard 등 페이지가 렌더링 */}
-      </ContentArea>
-    </Container>
+      <MainContent>
+        <Outlet />
+      </MainContent>
+    </LayoutContainer>
   );
 }
 
