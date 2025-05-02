@@ -10,3 +10,8 @@
 # AI 리포팅 페이지
 ![image](https://github.com/user-attachments/assets/e84ca5db-51d0-4e38-bed9-9ab9fd34a070)
 ![image](https://github.com/user-attachments/assets/d03515db-21ad-4930-b3e9-7f69f4d027d4)
+
+
+# IoT 관리 페이지
+![image](https://github.com/user-attachments/assets/7b04070a-904b-4d55-a9b3-e559b84f6ecb)
+![image](https://github.com/user-attachments/assets/7fcb5d45-6bd3-4485-8947-aeac17965906)
