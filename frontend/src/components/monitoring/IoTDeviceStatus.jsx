@@ -1,3 +1,5 @@
+// 모니터링 페이지 전용
+
 // src/components/monitoring/IoTDeviceStatus.jsx
 import React from 'react';
 import styled from 'styled-components';

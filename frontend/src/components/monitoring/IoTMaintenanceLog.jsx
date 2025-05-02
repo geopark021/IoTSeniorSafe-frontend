@@ -1,11 +1,6 @@
-// 모니터링 페이지 전용
-// src/components/monitoring/IntegratedSensorMonitoring.jsx
+// IoT 관리 페이지 전용
 import React, { useState } from 'react';
 import styled from 'styled-components';
-
-// 전구 아이콘 가져오기
-import bulbOn from '../../assets/icons/bulb-on.png';
-import bulbOff from '../../assets/icons/bulb-off.png';
 
 // 페이지네이션 아이콘 가져오기
 import firstPageIcon from '../../assets/icons/first-page-icon.png';
@@ -13,14 +8,14 @@ import previousPageIcon from '../../assets/icons/previous-page-icon.png';
 import nextPageIcon from '../../assets/icons/next-page-icon.png';
 import lastPageIcon from '../../assets/icons/last-page-icon.png';
 
-const MonitoringContainer = styled.div`
+const LogContainer = styled.div`
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
   padding: 24px;
 `;
 
-const MonitoringTitle = styled.h3`
+const LogTitle = styled.h3`
   font-family: 'NanumSquareRound', sans-serif;
   font-weight: 700;
   font-size: 20px;
@@ -118,30 +113,6 @@ const Td = styled.td`
   text-overflow: ellipsis;
 `;
 
-// 센서 값(전구)을 위한 특별 셀 - 텍스트 오버플로우 속성 없음
-const SensorTd = styled(Td)`
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
-`;
-
-const BulbContainer = styled.div`
-  display: flex;
-  align-items: center;
-`;
-
-const BulbIcon = styled.img`
-  width: 20px;
-  height: 20px;
-  margin-right: 4px;
-  vertical-align: middle;
-`;
-
-const BulbValue = styled.span`
-  vertical-align: middle;
-  margin-left: 4px;
-`;
-
 const PaginationContainer = styled.div`
   display: flex;
   justify-content: center;
@@ -177,152 +148,102 @@ const PageButton = styled.button`
   }
 `;
 
-function IntegratedSensorMonitoring() {
+function IoTMaintenanceLog() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('최신순');
 
   // 목업 데이터. API 연결 필요
-  const sensorData = [
+  const logData = [
     {
       id: 1,
-      name: '김길순',
-      phone: '010-5464-8787',
-      address: '전남 진도군 조도면 관매리',
-      manager: '김성현',
-      managerPhone: '010-3215-7897',
-      lighting: 2.5,
-      onOff: 0,
-      temp: 1.2,
-      humidity: 0,
-      lastCheck: '1시간 전',
-      status: '정한 진동 감지',
+      time: '2024.12.01 08:31:31',
+      sensorType: '진동센서',
+      name: '박복녀',
+      location: '전남 진도군 조도면 관매리',
+      errorMessage: '연결 끊김 (오프라인)',
+      status: '재부팅 완료',
     },
     {
       id: 2,
-      name: '박복녀',
-      phone: '010-1172-4712',
-      address: '전남 진도군 진도읍 송도리...',
-      manager: '박지형',
-      managerPhone: '010-3588-1234',
-      lighting: 0.5,
-      onOff: 0,
-      temp: 0.8,
-      humidity: 2.7,
-      lastCheck: '30분 전',
-      status: '이상 없음',
+      time: '2024.12.03 06:10:22',
+      sensorType: '진동센서',
+      name: '이영수',
+      location: '전남 진도군 진도읍 송도리...',
+      errorMessage: '연결 끊김 (오프라인)',
+      status: '미완료',
     },
     {
       id: 3,
-      name: '이영수',
-      phone: '010-3488-4882',
-      address: '전남 진도군 섬덕리 463...',
-      manager: '남민지',
-      managerPhone: '010-7888-1222',
-      lighting: 0,
-      onOff: 0.8,
-      temp: 1.2,
-      humidity: 0,
-      lastCheck: '1시간 전',
-      status: '이상 없음',
+      time: '2024.12.04 23:10:22',
+      sensorType: '진동센서',
+      name: '최준식',
+      location: '전남 진도군 섬덕리 463...',
+      errorMessage: '연결 끊김 (오프라인)',
+      status: '재부팅 완료',
     },
     {
       id: 4,
-      name: '최준식',
-      phone: '010-1327-5258',
-      address: '전남 진도군 임회면 조리...',
-      manager: '김성현',
-      managerPhone: '010-3215-7897',
-      lighting: 1,
-      onOff: 0.6,
-      temp: 0,
-      humidity: 0,
-      lastCheck: '3시간 전',
-      status: '이상 없음',
+      time: '2024.12.04 07:10:22',
+      sensorType: '진동센서',
+      name: '정말순',
+      location: '전남 진도군 임회면 조리...',
+      errorMessage: '연결 끊김 (오프라인)',
+      status: '미완료',
     },
     {
       id: 5,
-      name: '정말순',
-      phone: '010-1156-2377',
-      address: '전남 진도군 지산면 삼당리...',
-      manager: '박지형',
-      managerPhone: '010-3588-1234',
-      lighting: 0,
-      onOff: 0,
-      temp: 0,
-      humidity: 0,
-      lastCheck: '5시간 전',
-      status: '이상 없음',
+      time: '2024.12.04 08:10:22',
+      sensorType: '진동센서',
+      name: '정병철',
+      location: '전남 진도군 지산면 삼당리...',
+      errorMessage: '연결 끊김 (오프라인)',
+      status: '재부팅 완료',
     },
     {
       id: 6,
-      name: '정병철',
-      phone: '010-1463-4642',
-      address: '전남 진도군 진도읍 송도리...',
-      manager: '남민지',
-      managerPhone: '010-7888-1222',
-      lighting: 0,
-      onOff: 0,
-      temp: 0.8,
-      humidity: 0,
-      lastCheck: '2시간 전',
-      status: '이상 없음',
+      time: '2024.12.05 11:10:22',
+      sensorType: '진동센서',
+      name: '한정자',
+      location: '전남 진도군 진도읍 송도리...',
+      errorMessage: '연결 끊김 (오프라인)',
+      status: '재부팅 완료',
     },
     {
       id: 7,
-      name: '한정자',
-      phone: '010-1188-3257',
-      address: '전남 진도군 임회면 조리...',
-      manager: '정승환',
-      managerPhone: '010-6548-5777',
-      lighting: 1.5,
-      onOff: 0,
-      temp: 1,
-      humidity: 0,
-      lastCheck: '1시간 전',
-      status: '이상 없음',
+      time: '2024.12.05 06:10:22',
+      sensorType: '진동센서',
+      name: '윤순남',
+      location: '전남 진도군 임회면 조리...',
+      errorMessage: '연결 끊김 (오프라인)',
+      status: '재부팅 완료',
     },
     {
       id: 8,
+      time: '2024.12.08 09:10:22',
+      sensorType: '진동센서',
       name: '윤순남',
-      phone: '010-5464-8787',
-      address: '전남 진도군 섬덕리 463...',
-      manager: '정승환',
-      managerPhone: '010-6548-5777',
-      lighting: 1.1,
-      onOff: 0,
-      temp: 0,
-      humidity: 0,
-      lastCheck: '21시간 전',
-      status: '이상 없음',
+      location: '전남 진도군 섬덕리 463...',
+      errorMessage: '연결 끊김 (오프라인)',
+      status: '재부팅 완료',
     },
     {
       id: 9,
+      time: '2024.12.08 12:10:22',
+      sensorType: '진동센서',
       name: '조석호',
-      phone: '010-2472-4123',
-      address: '전남 진도군 조도면 관매리',
-      manager: '박지형',
-      managerPhone: '010-3588-1234',
-      lighting: 1.1,
-      onOff: 0,
-      temp: 0,
-      humidity: 0,
-      lastCheck: '3시간 전',
-      status: '이상 없음',
+      location: '전남 진도군 조도면 관매리',
+      errorMessage: '연결 끊김 (오프라인)',
+      status: '재부팅 완료',
     },
     {
       id: 10,
+      time: '2024.12.08 18:10:22',
+      sensorType: '진동센서',
       name: '송덕수',
-      phone: '010-1233-8787',
-      address: '전남 진도군 지산면 삼당리...',
-      manager: '정승환',
-      managerPhone: '010-6548-5777',
-      lighting: 0.3,
-      onOff: 0,
-      temp: 0,
-      humidity: 0,
-      lastCheck: '3시간 전',
-      status: '이상 없음',
+      location: '전남 진도군 지산면 삼당리...',
+      errorMessage: '연결 끊김 (오프라인)',
+      status: '재부팅 완료',
     },
   ];
 
@@ -331,20 +252,9 @@ function IntegratedSensorMonitoring() {
     setCurrentPage(page);
   };
 
-  // 전구 아이콘 및 값 렌더링 함수
-  const renderBulbIcon = value => {
-    const icon = value > 0 ? bulbOn : bulbOff;
-    return (
-      <BulbContainer>
-        <BulbIcon src={icon} alt={value > 0 ? '켜짐' : '꺼짐'} />
-        <BulbValue>{value}</BulbValue>
-      </BulbContainer>
-    );
-  };
-
   return (
-    <MonitoringContainer>
-      <MonitoringTitle>통합 센서 모니터링</MonitoringTitle>
+    <LogContainer>
+      <LogTitle>오류 및 유지보수 로그</LogTitle>
       <SearchFilterContainer>
         <SearchBox>
           <svg
@@ -382,49 +292,34 @@ function IntegratedSensorMonitoring() {
       <TableContainer>
         <Table>
           <colgroup>
-            <col style={{ width: '50px' }} /> {/* 번호 */}
-            <col style={{ width: '60px' }} /> {/* 이름  */}
-            <col style={{ width: '120px' }} /> {/* 연락처 */}
+            <col style={{ width: '40px' }} /> {/* 번호 */}
+            <col style={{ width: '150px' }} /> {/* 시간 */}
+            <col style={{ width: '80px' }} /> {/* 센서명 */}
+            <col style={{ width: '80px' }} /> {/* 이름 */}
             <col style={{ width: '180px' }} /> {/* 주소 */}
-            <col style={{ width: '70px' }} /> {/* 담당자 */}
-            <col style={{ width: '120px' }} /> {/* 담당자 연락처 */}
-            <col style={{ width: '50px' }} /> {/* 안방 */}
-            <col style={{ width: '50px' }} /> {/* 거실 */}
-            <col style={{ width: '50px' }} /> {/* 주방 */}
-            <col style={{ width: '50px' }} /> {/* 현관 */}
-            <col style={{ width: '110px' }} /> {/* 마지막 활동시간 */}
-            <col style={{ width: '140px' }} /> {/* 상태/메세지 */}
+            <col style={{ width: '150px' }} /> {/* 오류내용 */}
+            <col style={{ width: '100px' }} /> {/* 조치 상황 */}
           </colgroup>
           <thead>
             <tr>
-              <Th>No</Th>
+              <Th>번호</Th>
+              <Th>시간</Th>
+              <Th>센서명</Th>
               <Th>이름</Th>
-              <Th>연락처</Th>
               <Th>주소</Th>
-              <Th>담당자</Th>
-              <Th>담당자 연락처</Th>
-              <Th>안방</Th>
-              <Th>거실</Th>
-              <Th>주방</Th>
-              <Th>현관</Th>
-              <Th>마지막 활동시간</Th>
-              <Th>상태/메세지</Th>
+              <Th>오류내용</Th>
+              <Th>조치 상황</Th>
             </tr>
           </thead>
           <tbody>
-            {sensorData.map(item => (
+            {logData.map(item => (
               <tr key={item.id}>
                 <Td>{item.id}</Td>
+                <Td>{item.time}</Td>
+                <Td>{item.sensorType}</Td>
                 <Td>{item.name}</Td>
-                <Td>{item.phone}</Td>
-                <Td title={item.address}>{item.address}</Td>
-                <Td>{item.manager}</Td>
-                <Td>{item.managerPhone}</Td>
-                <SensorTd>{renderBulbIcon(item.lighting)}</SensorTd>
-                <SensorTd>{renderBulbIcon(item.onOff)}</SensorTd>
-                <SensorTd>{renderBulbIcon(item.temp)}</SensorTd>
-                <SensorTd>{renderBulbIcon(item.humidity)}</SensorTd>
-                <Td>{item.lastCheck}</Td>
+                <Td title={item.location}>{item.location}</Td>
+                <Td>{item.errorMessage}</Td>
                 <Td>{item.status}</Td>
               </tr>
             ))}
@@ -461,8 +356,8 @@ function IntegratedSensorMonitoring() {
           <img src={lastPageIcon} alt="마지막 페이지" />
         </PageButton>
       </PaginationContainer>
-    </MonitoringContainer>
+    </LogContainer>
   );
 }
 
-export default IntegratedSensorMonitoring;
+export default IoTMaintenanceLog;

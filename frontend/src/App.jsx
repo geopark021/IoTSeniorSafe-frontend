@@ -11,9 +11,9 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Monitoring from './pages/Monitoring';
 import AIReportingPage from './pages/AIReporting';
+import IoTManage from './pages/IoTManage';
 // 페이지 구현시마다 임포트
 // import Dashboard from './pages/Dashboard';
-// import IoTManage from './pages/IoTManage';
 
 function App() {
   return (
@@ -24,7 +24,7 @@ function App() {
           <Route path="dashboard" element={<div>대시보드 페이지</div>} />
           <Route path="monitoring" element={<Monitoring />} />
           <Route path="ai" element={<AIReportingPage />} />
-          <Route path="iot" element={<div>IoT 관리 페이지</div>} />
+          <Route path="iot" element={<IoTManage />} />
           <Route path="login" element={<Login />} />
           <Route path="logout" element={<div>로그아웃 처리 페이지</div>} />
 
