@@ -8,7 +8,6 @@ const MonitoringContainer = styled.div`
   flex-direction: column;
   gap: 20px;
   padding: 20px;
-  // 높이와 오버플로우 속성 제거 - 스크롤 제어는 Layout 컴포넌트에서 처리
 `;
 
 const PageTitle = styled.h2`

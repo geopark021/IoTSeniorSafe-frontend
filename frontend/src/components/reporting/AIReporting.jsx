@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 
 import cautionIcon from '../../assets/icons/caution-icon.png';
 import checkIcon from '../../assets/icons/check-icon.png';
 import reportIcon from '../../assets/icons/report-icon.png';
+import { aiReportService } from '../../services/aiReportService';
 
 // 메인 컨테이너
 const Container = styled.div`
@@ -90,7 +91,22 @@ const DangerItem = styled.div`
 `;
 
 // 대응 지침 섹션 스타일
-const GuideList = styled.ol`
+const GuideList = styled.div`
+  margin: 0;
+
+  p {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-family: 'NanumSquareRound', sans-serif;
+    line-height: 1.6;
+  }
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const GuideListOld = styled.ol`
   padding-left: 20px;
   margin: 0;
 
@@ -184,6 +200,15 @@ const ReportButton = styled.button`
   cursor: pointer;
   font-weight: 500;
   font-family: 'NanumSquareRound', sans-serif;
+
+  &:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+
+  &:hover:not(:disabled) {
+    background-color: #c0392b;
+  }
 `;
 
 const CancelButton = styled.button`
@@ -194,12 +219,117 @@ const CancelButton = styled.button`
   cursor: pointer;
   font-weight: 500;
   font-family: 'NanumSquareRound', sans-serif;
+
+  &:hover {
+    background-color: #e0e0e0;
+  }
+`;
+
+// 로딩 메시지
+const LoadingMessage = styled.div`
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-style: italic;
+`;
+
+// 에러 메시지
+const ErrorMessage = styled.div`
+  background-color: #fee;
+  border-left: 4px solid #e74c3c;
+  padding: 12px;
+  border-radius: 4px;
+  color: #c00;
+  margin-bottom: 12px;
 `;
 
 const AIReporting = () => {
+  // 상태 관리
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [aiResponse, setAiResponse] = useState(null);
+  const [formData, setFormData] = useState({
+    manager: '정승환',
+    report: '',
+  });
+
+  // 하드코딩된 센서 데이터 (현재 상황)
+  const hardcodedSensorData = [
+    {
+      sensorType: 'LED',
+      location: '거실',
+      value: 120.0,
+      threshold: 100.0,
+      timestamp: new Date().toISOString(),
+    },
+    {
+      sensorType: '재실감지',
+      location: '거실',
+      value: 85.0,
+      threshold: 70.0,
+      timestamp: new Date().toISOString(),
+    },
+    {
+      sensorType: '소음감지',
+      location: '거실',
+      value: 75.0,
+      threshold: 80.0,
+      timestamp: new Date().toISOString(),
+    },
+  ];
+
+  // 신고 버튼 클릭 핸들러
+  const handleReport = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // API 호출
+      const response =
+        await aiReportService.analyzeSensorData(hardcodedSensorData);
+
+      // 응답 저장
+      setAiResponse(response);
+
+      // 신고 양식에 AI 응답 내용 자동 입력
+      setFormData(prev => ({
+        ...prev,
+        report: `[AI 분석 결과]\n위험도: ${response.riskLevel}\n\n${response.situation}\n\n[대응 지침]\n${response.recommendation}\n\n[신고 기관]\n${response.reportingAgency} (${response.contactNumber})`,
+      }));
+
+      console.log('AI 분석 완료:', response);
+    } catch (err) {
+      console.error('AI 분석 실패:', err);
+      setError('AI 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 취소 버튼 클릭 핸들러
+  const handleCancel = () => {
+    setFormData({
+      manager: '정승환',
+      report: '',
+    });
+    setAiResponse(null);
+    setError(null);
+  };
+
+  // 폼 입력 변경 핸들러
+  const handleInputChange = e => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
   return (
     <Container>
       <Title>AI 리포팅</Title>
+
+      {error && <ErrorMessage>{error}</ErrorMessage>}
 
       <ReportingSections>
         {/* 위험 상황 감지 섹션 */}
@@ -231,22 +361,35 @@ const AIReporting = () => {
             <SectionTitle>대응 지침</SectionTitle>
           </SectionHeader>
           <SectionContent>
-            <GuideList>
-              <li>
-                <strong>증감 화면 확인</strong>
-                <p>
-                  어르신의 낙상이나 사고 가능성이 높으므로 빠르게 현장 확인.
-                </p>
-              </li>
-              <li>
-                <strong>안전 확인</strong>
-                <p>어르신에게 음성 통화 또는 전화를 통해 상태 확인.</p>
-              </li>
-              <li>
-                <strong>응급 대응</strong>
-                <p>이상 상태 지속 시 즉시 응급 연락망에 알림 조치.</p>
-              </li>
-            </GuideList>
+            {loading ? (
+              <LoadingMessage>AI가 상황을 분석하고 있습니다...</LoadingMessage>
+            ) : aiResponse ? (
+              <GuideList>
+                {aiResponse.recommendation
+                  .split('\n')
+                  .filter(item => item.trim())
+                  .map((item, index) => (
+                    <p key={index}>{item}</p>
+                  ))}
+              </GuideList>
+            ) : (
+              <GuideListOld>
+                <li>
+                  <strong>증감 화면 확인</strong>
+                  <p>
+                    어르신의 낙상이나 사고 가능성이 높으므로 빠르게 현장 확인.
+                  </p>
+                </li>
+                <li>
+                  <strong>안전 확인</strong>
+                  <p>어르신에게 음성 통화 또는 전화를 통해 상태 확인.</p>
+                </li>
+                <li>
+                  <strong>응급 대응</strong>
+                  <p>이상 상태 지속 시 즉시 응급 연락망에 알림 조치.</p>
+                </li>
+              </GuideListOld>
+            )}
           </SectionContent>
         </ReportingSection>
 
@@ -284,15 +427,27 @@ const AIReporting = () => {
             <ReportForm>
               <FormRow>
                 <label>담당자</label>
-                <input type="text" placeholder="정승환" />
+                <input
+                  type="text"
+                  name="manager"
+                  value={formData.manager}
+                  onChange={handleInputChange}
+                />
               </FormRow>
               <FormRow>
                 <label>상황 보고 및 대응 지침</label>
-                <textarea placeholder="상황을 상세히 기록해주세요"></textarea>
+                <textarea
+                  name="report"
+                  value={formData.report}
+                  onChange={handleInputChange}
+                  placeholder="상황을 상세히 기록해주세요"
+                />
               </FormRow>
               <FormButtons>
-                <ReportButton>신고</ReportButton>
-                <CancelButton>취소</CancelButton>
+                <ReportButton onClick={handleReport} disabled={loading}>
+                  {loading ? 'AI 분석 중...' : '신고'}
+                </ReportButton>
+                <CancelButton onClick={handleCancel}>취소</CancelButton>
               </FormButtons>
             </ReportForm>
           </SectionContent>

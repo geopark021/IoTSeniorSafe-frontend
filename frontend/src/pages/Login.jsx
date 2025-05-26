@@ -143,7 +143,6 @@ function Login() {
     };
   }, []);
 
-  // AuthContext 사용 시 오류 방지를 위한 예외 처리 추가
   let auth = { login: () => false };
 
   try {
