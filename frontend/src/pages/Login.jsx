@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 
 const LoginPageWrapper = styled.div`
-  width: 100%;
+  width: 30%;
   height: 100%;
   display: flex;
   justify-content: center;
@@ -128,7 +128,6 @@ function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  // 로그인 페이지에서 메인 컨텐츠 영역에 클래스 추가
   useEffect(() => {
     const mainContent = document.querySelector('.main-content');
     if (mainContent) {

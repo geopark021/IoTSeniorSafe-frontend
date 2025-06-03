@@ -1,12 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 
 import cautionIcon from '../../assets/icons/caution-icon.png';
 import checkIcon from '../../assets/icons/check-icon.png';
 import reportIcon from '../../assets/icons/report-icon.png';
-import { aiReportService } from '../../services/aiReportService';
 
-// 메인 컨테이너
 const Container = styled.div`
   background-color: #fff;
   border-radius: 8px;
@@ -22,7 +20,6 @@ const Title = styled.h2`
   font-family: 'NanumSquareRound', sans-serif;
 `;
 
-// 리포팅 섹션 컨테이너
 const ReportingSections = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -33,14 +30,12 @@ const ReportingSections = styled.div`
   }
 `;
 
-// 개별 섹션 컨테이너
 const ReportingSection = styled.div`
   border: 1px solid #f0f0f0;
   border-radius: 8px;
   overflow: hidden;
 `;
 
-// 섹션 헤더
 const SectionHeader = styled.div`
   display: flex;
   align-items: center;
@@ -62,12 +57,10 @@ const SectionTitle = styled.h3`
   font-family: 'NanumSquareRound', sans-serif;
 `;
 
-// 섹션 내용
 const SectionContent = styled.div`
   padding: 16px;
 `;
 
-// 위험 감지 섹션 스타일
 const DangerItems = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -90,7 +83,6 @@ const DangerItem = styled.div`
   }
 `;
 
-// 대응 지침 섹션 스타일
 const GuideList = styled.div`
   margin: 0;
 
@@ -106,29 +98,6 @@ const GuideList = styled.div`
   }
 `;
 
-const GuideListOld = styled.ol`
-  padding-left: 20px;
-  margin: 0;
-
-  li {
-    margin-bottom: 12px;
-    font-family: 'NanumSquareRound', sans-serif;
-  }
-
-  strong {
-    display: block;
-    margin-bottom: 4px;
-    font-family: 'NanumSquareRound', sans-serif;
-  }
-
-  p {
-    margin: 0;
-    font-size: 14px;
-    font-family: 'NanumSquareRound', sans-serif;
-  }
-`;
-
-// 상세 설명 섹션 스타일
 const DescriptionContent = styled.div`
   h4 {
     font-size: 14px;
@@ -139,8 +108,17 @@ const DescriptionContent = styled.div`
 `;
 
 const AlertMessage = styled.div`
-  background-color: #fff8e1;
-  border-left: 4px solid #ffc107;
+  background-color: ${props => {
+    if (props.$riskLevel === '심각') return '#ffebee';
+    if (props.$riskLevel === '의심') return '#fff8e1';
+    return '#fff8e1';
+  }};
+  border-left: 4px solid
+    ${props => {
+      if (props.$riskLevel === '심각') return '#f44336';
+      if (props.$riskLevel === '의심') return '#ff9800';
+      return '#ffc107';
+    }};
   padding: 12px;
   border-radius: 4px;
 
@@ -151,7 +129,6 @@ const AlertMessage = styled.div`
   }
 `;
 
-// 신고하기 섹션 스타일
 const ReportForm = styled.div`
   display: flex;
   flex-direction: column;
@@ -179,7 +156,7 @@ const FormRow = styled.div`
   }
 
   textarea {
-    min-height: 80px;
+    min-height: 200px;
     resize: vertical;
   }
 `;
@@ -225,15 +202,14 @@ const CancelButton = styled.button`
   }
 `;
 
-// 로딩 메시지
 const LoadingMessage = styled.div`
   text-align: center;
   padding: 20px;
   color: #666;
   font-style: italic;
+  font-family: 'NanumSquareRound', sans-serif;
 `;
 
-// 에러 메시지
 const ErrorMessage = styled.div`
   background-color: #fee;
   border-left: 4px solid #e74c3c;
@@ -241,66 +217,173 @@ const ErrorMessage = styled.div`
   border-radius: 4px;
   color: #c00;
   margin-bottom: 12px;
+  font-family: 'NanumSquareRound', sans-serif;
 `;
 
-const AIReporting = () => {
+const HouseholdInfo = styled.div`
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 16px;
+
+  h4 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #495057;
+    font-family: 'NanumSquareRound', sans-serif;
+  }
+
+  p {
+    margin: 4px 0;
+    font-size: 13px;
+    color: #6c757d;
+    font-family: 'NanumSquareRound', sans-serif;
+  }
+`;
+
+const AIReporting = ({ selectedRiskEntry }) => {
   // 상태 관리
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [aiResponse, setAiResponse] = useState(null);
+  const [reportingDocument, setReportingDocument] = useState(null);
   const [formData, setFormData] = useState({
     manager: '정승환',
     report: '',
   });
 
-  // 하드코딩된 센서 데이터 (현재 상황)
-  const hardcodedSensorData = [
-    {
-      sensorType: 'LED',
-      location: '거실',
-      value: 120.0,
-      threshold: 100.0,
-      timestamp: new Date().toISOString(),
-    },
-    {
-      sensorType: '재실감지',
-      location: '거실',
-      value: 85.0,
-      threshold: 70.0,
-      timestamp: new Date().toISOString(),
-    },
-    {
-      sensorType: '소음감지',
-      location: '거실',
-      value: 75.0,
-      threshold: 80.0,
-      timestamp: new Date().toISOString(),
-    },
-  ];
+  // 선택된 위험 내역이 변경될 때 초기화 및 자동 분석
+  useEffect(() => {
+    if (selectedRiskEntry && selectedRiskEntry.householdId) {
+      console.log('선택된 위험 내역:', selectedRiskEntry);
+      setAiResponse(null);
+      setReportingDocument(null);
+      setError(null);
 
-  // 신고 버튼 클릭 핸들러
-  const handleReport = async () => {
+      // 자동으로 AI 분석 시작
+      handleAnalyzeHousehold();
+    }
+  }, [selectedRiskEntry]);
+
+  // AWS Bedrock을 통한 가구 위험도 분석
+  const handleAnalyzeHousehold = async () => {
+    if (!selectedRiskEntry || !selectedRiskEntry.householdId) {
+      setError('선택된 위험 내역이 없습니다.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      // API 호출
-      const response =
-        await aiReportService.analyzeSensorData(hardcodedSensorData);
+      console.log(`AI 분석 시작: householdId=${selectedRiskEntry.householdId}`);
 
-      // 응답 저장
-      setAiResponse(response);
+      const baseURL =
+        import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+      const response = await fetch(
+        `${baseURL}/api/ai-reporting/analyze-household/${selectedRiskEntry.householdId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+        }
+      );
 
-      // 신고 양식에 AI 응답 내용 자동 입력
+      console.log('AWS Bedrock 응답 상태:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: AI 분석 요청 실패`);
+      }
+
+      const data = await response.json();
+      console.log('AWS Bedrock AI 분석 결과:', data);
+
+      setAiResponse(data);
+
+      // 자동으로 신고 내용 미리 생성
+      if (data && data.situation) {
+        const autoReport = `[AI 분석 결과]\n위험도: ${data.riskLevel}\n발생위치: ${data.location || '확인필요'}\n\n[상황 분석]\n${data.situation}\n\n[대응 지침]\n${data.recommendation}\n\n[비교 분석]\n${data.comparisonDetails || '공통 활동 비율: ' + (data.commonDataRatio?.toFixed(1) || '0') + '%'}\n\n[긴급도]\n${data.urgencyLevel || '보통'}\n\n[신고 기관]\n${data.reportingAgency || '119'} (${data.contactNumber || '119'})`;
+
+        setFormData(prev => ({
+          ...prev,
+          report: autoReport,
+        }));
+      }
+    } catch (err) {
+      console.error('AWS Bedrock AI 분석 실패:', err);
+      setError(`AI 분석 중 오류가 발생했습니다: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 신고 문서 생성 및 신고 버튼 클릭 핸들러
+  const handleReport = async () => {
+    if (!selectedRiskEntry || !aiResponse) {
+      setError('분석 결과가 없습니다.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      console.log(
+        `신고 문서 생성 시작: householdId=${selectedRiskEntry.householdId}`
+      );
+
+      const baseURL =
+        import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+      const response = await fetch(
+        `${baseURL}/api/ai-reporting/generate-report/${selectedRiskEntry.householdId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(aiResponse),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: 신고 문서 생성 실패`);
+      }
+
+      const reportingDocument = await response.json();
+      console.log('신고 문서 생성 완료:', reportingDocument);
+      console.log(
+        'immediateActions 필드 확인:',
+        reportingDocument.immediateActions
+      );
+      console.log('전체 필드 목록:', Object.keys(reportingDocument));
+
+      setReportingDocument(reportingDocument);
+
+      // 신고 양식에 보고서 내용 자동 입력 (reportTitle부터 시작)
+      const detailedReport = [
+        reportingDocument.reportTitle || '',
+        reportingDocument.summary || '',
+        reportingDocument.detailedSituation || '',
+        reportingDocument.riskAssessment || '',
+        reportingDocument.immediateActions || '',
+        reportingDocument.followUpPlan || '',
+        reportingDocument.contactInfo || '',
+      ]
+        .filter(section => section.trim())
+        .join('\n\n');
+
       setFormData(prev => ({
         ...prev,
-        report: `[AI 분석 결과]\n위험도: ${response.riskLevel}\n\n${response.situation}\n\n[대응 지침]\n${response.recommendation}\n\n[신고 기관]\n${response.reportingAgency} (${response.contactNumber})`,
+        report: detailedReport,
       }));
-
-      console.log('AI 분석 완료:', response);
     } catch (err) {
-      console.error('AI 분석 실패:', err);
-      setError('AI 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+      console.error('신고 문서 생성 실패:', err);
+      setError(`신고 문서 생성 중 오류가 발생했습니다: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -313,6 +396,7 @@ const AIReporting = () => {
       report: '',
     });
     setAiResponse(null);
+    setReportingDocument(null);
     setError(null);
   };
 
@@ -325,11 +409,81 @@ const AIReporting = () => {
     }));
   };
 
+  // 신고 문서에서 즉시 조치사항 추출 함수
+  const extractImmediateActions = reportingDocument => {
+    if (!reportingDocument) return null;
+
+    // immediateActions 필드가 있으면 사용
+    if (reportingDocument.immediateActions) {
+      return reportingDocument.immediateActions;
+    }
+
+    // 전체 텍스트에서 [즉시 조치사항] 부분 추출
+    const fullText =
+      reportingDocument.detailedSituation || reportingDocument.summary || '';
+    const immediateActionsMatch = fullText.match(
+      /\[즉시 조치사항\]([\s\S]*?)(?:\[|$)/
+    );
+
+    if (immediateActionsMatch && immediateActionsMatch[1]) {
+      return immediateActionsMatch[1].trim();
+    }
+
+    return null;
+  };
+  const formatDateTime = dateString => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch (error) {
+      return dateString;
+    }
+  };
+
   return (
     <Container>
       <Title>AI 리포팅</Title>
 
       {error && <ErrorMessage>{error}</ErrorMessage>}
+
+      {/* 선택된 가구 정보 표시 */}
+      {selectedRiskEntry && (
+        <HouseholdInfo>
+          <h4>선택된 가구 정보</h4>
+          <p>
+            <strong>가구 ID:</strong> {selectedRiskEntry.householdId}
+          </p>
+          <p>
+            <strong>가구명:</strong> {selectedRiskEntry.householdName}
+          </p>
+          <p>
+            <strong>발생 시간:</strong>{' '}
+            {formatDateTime(selectedRiskEntry.createdAt)}
+          </p>
+          <p>
+            <strong>위험도:</strong> {selectedRiskEntry.riskLevel}
+          </p>
+          {selectedRiskEntry.commonDataRatio !== undefined && (
+            <p>
+              <strong>공통 활동 비율:</strong>{' '}
+              {selectedRiskEntry.commonDataRatio?.toFixed(1)}%
+            </p>
+          )}
+          <p>
+            <strong>지역:</strong> {selectedRiskEntry.address}
+          </p>
+          <p>
+            <strong>담당자:</strong> {selectedRiskEntry.managerName}
+          </p>
+        </HouseholdInfo>
+      )}
 
       <ReportingSections>
         {/* 위험 상황 감지 섹션 */}
@@ -339,18 +493,64 @@ const AIReporting = () => {
             <SectionTitle>위험 상황 감지</SectionTitle>
           </SectionHeader>
           <SectionContent>
-            <DangerItems>
-              <DangerItem>
-                <h4>발생 위치</h4>
-                <p>감지된 측정 수치</p>
-                <p>LED 상태</p>
-              </DangerItem>
-              <DangerItem>
-                <h4>거실</h4>
-                <p>평소보다 120% 증가</p>
-                <p>10:35부터 켜짐</p>
-              </DangerItem>
-            </DangerItems>
+            {loading ? (
+              <LoadingMessage>
+                AWS Bedrock AI가 상황을 분석하고 있습니다...
+              </LoadingMessage>
+            ) : aiResponse ? (
+              <DangerItems>
+                <DangerItem>
+                  <h4>
+                    <b>발생 위치</b>
+                  </h4>
+                  <p>
+                    <b>하루 전날 비교 수치</b>
+                  </p>
+                  <p>
+                    <b>위험도 수준</b>
+                  </p>
+                </DangerItem>
+                <DangerItem>
+                  <p>{aiResponse.location || '거실'}</p>
+                  <p>
+                    {aiResponse.comparisonDetails ||
+                      `공통 활동 ${aiResponse.commonDataRatio?.toFixed(1)}%`}
+                  </p>
+                  <p
+                    style={{
+                      color:
+                        aiResponse.riskLevel === '심각' ? '#d32f2f' : '#f57c00',
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    {aiResponse.riskLevel}
+                  </p>
+                </DangerItem>
+              </DangerItems>
+            ) : selectedRiskEntry ? (
+              <LoadingMessage>
+                AWS AI 분석을 준비하고 있습니다...
+              </LoadingMessage>
+            ) : (
+              <DangerItems>
+                <DangerItem>
+                  <h4>
+                    <b>발생 위치</b>
+                  </h4>
+                  <p>
+                    <b>하루 전날 비교 수치</b>
+                  </p>
+                  <p>
+                    <b>위험도 수준</b>
+                  </p>
+                </DangerItem>
+                <DangerItem>
+                  <h4>위험 의심 내역을 선택해주세요</h4>
+                  <p>-</p>
+                  <p>-</p>
+                </DangerItem>
+              </DangerItems>
+            )}
           </SectionContent>
         </ReportingSection>
 
@@ -362,8 +562,10 @@ const AIReporting = () => {
           </SectionHeader>
           <SectionContent>
             {loading ? (
-              <LoadingMessage>AI가 상황을 분석하고 있습니다...</LoadingMessage>
-            ) : aiResponse ? (
+              <LoadingMessage>
+                AWS AI가 대응 지침을 생성하고 있습니다...
+              </LoadingMessage>
+            ) : aiResponse && aiResponse.recommendation ? (
               <GuideList>
                 {aiResponse.recommendation
                   .split('\n')
@@ -372,23 +574,40 @@ const AIReporting = () => {
                     <p key={index}>{item}</p>
                   ))}
               </GuideList>
+            ) : reportingDocument && reportingDocument.immediateActions ? (
+              <GuideList>
+                {reportingDocument.immediateActions
+                  .split('\n')
+                  .filter(item => item.trim())
+                  .map((item, index) => {
+                    // "즉시 필요한 조치사항은 다음과 같습니다:" 같은 헤더 텍스트 제거
+                    if (
+                      (item.includes('즉시') && item.includes('조치')) ||
+                      (item.includes('다음과') && item.includes('같습니다'))
+                    ) {
+                      return null;
+                    }
+                    return <p key={index}>{item}</p>;
+                  })
+                  .filter(Boolean)}
+              </GuideList>
             ) : (
-              <GuideListOld>
-                <li>
-                  <strong>증감 화면 확인</strong>
-                  <p>
-                    어르신의 낙상이나 사고 가능성이 높으므로 빠르게 현장 확인.
-                  </p>
-                </li>
-                <li>
-                  <strong>안전 확인</strong>
-                  <p>어르신에게 음성 통화 또는 전화를 통해 상태 확인.</p>
-                </li>
-                <li>
-                  <strong>응급 대응</strong>
-                  <p>이상 상태 지속 시 즉시 응급 연락망에 알림 조치.</p>
-                </li>
-              </GuideListOld>
+              <GuideList>
+                <p>
+                  <strong>1. 즉각 화면 확인</strong>
+                </p>
+                <p>
+                  어르신의 낙상이나 사고 가능성이 높으므로 빠르게 현장 확인.
+                </p>
+                <p>
+                  <strong>2. 안전 확인</strong>
+                </p>
+                <p>어르신에게 음성 통화 또는 전화를 통해 상태 확인.</p>
+                <p>
+                  <strong>3. 응급 대응</strong>
+                </p>
+                <p>이상 상태 지속 시 즉시 응급 연락망에 알림 조치.</p>
+              </GuideList>
             )}
           </SectionContent>
         </ReportingSection>
@@ -402,17 +621,32 @@ const AIReporting = () => {
           <SectionContent>
             <DescriptionContent>
               <h4>상황 보고 및 대응 지침</h4>
-              <AlertMessage>
-                <p>[ 위험 상황 감지 ]</p>
-                <p>
-                  오늘 오전 10시 35분부터 거실에서 비정상적으로 높은 움직임이
-                  감지되었습니다.
-                </p>
-                <p>
-                  이 수치는 평소 대비 120%로 매우 높은 수준입니다. LED 상태는
-                  증격 감지 이후 켜진 상태로 유지되고 있습니다.
-                </p>
-              </AlertMessage>
+              {aiResponse ? (
+                <AlertMessage $riskLevel={aiResponse.riskLevel}>
+                  <p>
+                    <strong>[ {aiResponse.riskLevel} 위험 상황 감지 ]</strong>
+                  </p>
+                  <p>{aiResponse.situation}</p>
+                  {aiResponse.comparisonDetails && (
+                    <p>
+                      <strong>비교 분석:</strong> {aiResponse.comparisonDetails}
+                    </p>
+                  )}
+                  {aiResponse.urgencyLevel && (
+                    <p>
+                      <strong>긴급도:</strong> {aiResponse.urgencyLevel}
+                    </p>
+                  )}
+                </AlertMessage>
+              ) : (
+                <AlertMessage>
+                  <p>[ 위험 상황 대기 중 ]</p>
+                  <p>
+                    위험 의심 내역을 선택하면 AWS Bedrock AI가 상황을 분석하여
+                    상세한 정보를 제공합니다.
+                  </p>
+                </AlertMessage>
+              )}
             </DescriptionContent>
           </SectionContent>
         </ReportingSection>
@@ -440,15 +674,26 @@ const AIReporting = () => {
                   name="report"
                   value={formData.report}
                   onChange={handleInputChange}
-                  placeholder="상황을 상세히 기록해주세요"
+                  placeholder="AWS AI 분석 결과를 기반으로 신고 내용이 자동 생성됩니다"
                 />
               </FormRow>
               <FormButtons>
-                <ReportButton onClick={handleReport} disabled={loading}>
-                  {loading ? 'AI 분석 중...' : '신고'}
+                <ReportButton
+                  onClick={handleReport}
+                  disabled={loading || !aiResponse}
+                >
+                  {loading ? '문서 생성 중...' : '신고'}
                 </ReportButton>
                 <CancelButton onClick={handleCancel}>취소</CancelButton>
               </FormButtons>
+              {aiResponse && aiResponse.reportingAgency && (
+                <div
+                  style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}
+                >
+                  <strong>신고 기관:</strong> {aiResponse.reportingAgency} (
+                  {aiResponse.contactNumber})
+                </div>
+              )}
             </ReportForm>
           </SectionContent>
         </ReportingSection>

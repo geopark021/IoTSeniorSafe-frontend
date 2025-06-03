@@ -40,6 +40,11 @@ const GlobalStyle = createGlobalStyle`
 
   #root {
     height: 100%; // 루트 요소도 전체 높이로 설정
+    max-width: 100% !important;
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+    text-align: inherit !important;
   }
 `;
 
