@@ -1,6 +1,7 @@
 // 모니터링 페이지 전용
 // src/components/monitoring/IntegratedSensorMonitoring.jsx
-import React, { useState } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 
 // 전구 아이콘 가져오기
@@ -177,13 +178,33 @@ const PageButton = styled.button`
   }
 `;
 
+// API 설정
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
+const monitoringAPI = {
+  getHouseholdMonitoring: async (page = 0, size = 10, sortBy = 'latest') => {
+    const response = await fetch(
+      `${API_BASE_URL}/api/monitoring/households?page=${page}&size=${size}&sortBy=${sortBy}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  },
+};
+
 function IntegratedSensorMonitoring() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('최신순');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // 목업 데이터. API 연결 필요
-  const sensorData = [
+  // 목업 데이터. API 연결 실패 시 사용
+  const [sensorData, setSensorData] = useState([
     {
       id: 1,
       name: '김길순',
@@ -324,7 +345,131 @@ function IntegratedSensorMonitoring() {
       lastCheck: '3시간 전',
       status: '이상 없음',
     },
-  ];
+  ]);
+
+  // API 데이터 로드 함수
+  const loadMonitoringData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const sortMapping = {
+        최신순: 'latest',
+        이름순: 'name',
+        상태순: 'status',
+      };
+
+      const response = await monitoringAPI.getHouseholdMonitoring(
+        0,
+        100,
+        sortMapping[filter] || 'latest'
+      );
+
+      if (response.success && response.data) {
+        // API 데이터를 기존 형식으로 변환
+        const convertedData = response.data.map((item, index) => ({
+          id: index + 1,
+          name: item.name || '-',
+          phone: item.contactNumber || '-',
+          address: item.address || '-',
+          manager: item.managerName || '-',
+          managerPhone: item.managerContact || '-',
+          lighting: item.lightLevel || 0,
+          onOff: item.occupancyLevel || 0,
+          temp: item.noiseLevel || 0,
+          humidity: item.toiletLevel || 0,
+          lastCheck: formatTimeDifference(item.lastActivityTime),
+          status: item.status || '알 수 없음',
+        }));
+
+        setSensorData(convertedData);
+      }
+    } catch (err) {
+      console.error('API 연결 실패:', err);
+      setError(err.message);
+      // 실패 시 기존 목업 데이터 유지
+    } finally {
+      setLoading(false);
+    }
+  }, [filter]);
+
+  // 시간 차이 포맷팅 함수
+  const formatTimeDifference = dateTimeString => {
+    if (!dateTimeString) return '데이터 없음';
+
+    const now = new Date();
+    const activityTime = new Date(dateTimeString);
+    const diffMinutes = Math.floor((now - activityTime) / (1000 * 60));
+
+    if (diffMinutes < 60) {
+      return `${diffMinutes}분 전`;
+    } else if (diffMinutes < 1440) {
+      return `${Math.floor(diffMinutes / 60)}시간 전`;
+    } else {
+      return `${Math.floor(diffMinutes / 1440)}일 전`;
+    }
+  };
+
+  // 컴포넌트 마운트 시 데이터 로드
+  useEffect(() => {
+    loadMonitoringData();
+  }, [loadMonitoringData]);
+
+  // 자동 새로고침 (30초마다)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadMonitoringData();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [loadMonitoringData]);
+
+  // 검색 필터링된 데이터
+  const filteredData = sensorData.filter(
+    item =>
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.manager.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // 페이지네이션 관련 계산
+  const itemsPerPage = 10;
+  const totalItems = filteredData.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  // 현재 페이지에 표시할 데이터
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentPageData = filteredData.slice(startIndex, endIndex);
+
+  // 페이지 번호 생성 함수
+  const generatePageNumbers = () => {
+    if (totalPages <= 1) return []; // 1페이지 이하면 페이지 번호 안 보여줌
+
+    const pageNumbers = [];
+    const maxVisiblePages = 5;
+
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    // 끝 페이지가 조정되면 시작 페이지도 조정
+    if (endPage - startPage < maxVisiblePages - 1) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pageNumbers.push(i);
+    }
+
+    return pageNumbers;
+  };
+
+  // 현재 페이지가 총 페이지 수를 초과하면 첫 번째 페이지로 이동
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [currentPage, totalPages]);
 
   // 페이지 변경 핸들러
   const handlePageChange = page => {
@@ -333,18 +478,42 @@ function IntegratedSensorMonitoring() {
 
   // 전구 아이콘 및 값 렌더링 함수
   const renderBulbIcon = value => {
-    const icon = value > 0 ? bulbOn : bulbOff;
+    const numValue = parseFloat(value) || 0;
+    const icon = numValue > 0 ? bulbOn : bulbOff;
     return (
       <BulbContainer>
-        <BulbIcon src={icon} alt={value > 0 ? '켜짐' : '꺼짐'} />
-        <BulbValue>{value}</BulbValue>
+        <BulbIcon src={icon} alt={numValue > 0 ? '켜짐' : '꺼짐'} />
+        <BulbValue>{numValue.toFixed(1)}</BulbValue>
       </BulbContainer>
     );
   };
 
   return (
     <MonitoringContainer>
-      <MonitoringTitle>통합 센서 모니터링</MonitoringTitle>
+      <MonitoringTitle>
+        통합 센서 모니터링
+        {loading && (
+          <span style={{ fontSize: '14px', color: '#666', marginLeft: '10px' }}>
+            새로고침 중...
+          </span>
+        )}
+      </MonitoringTitle>
+
+      {error && (
+        <div
+          style={{
+            backgroundColor: '#fff3cd',
+            color: '#856404',
+            padding: '12px',
+            borderRadius: '8px',
+            marginBottom: '16px',
+            fontSize: '14px',
+          }}
+        >
+          API 연결 실패: {error} (목업 데이터로 표시됩니다)
+        </div>
+      )}
+
       <SearchFilterContainer>
         <SearchBox>
           <svg
@@ -412,9 +581,9 @@ function IntegratedSensorMonitoring() {
             </tr>
           </thead>
           <tbody>
-            {sensorData.map(item => (
+            {currentPageData.map((item, index) => (
               <tr key={item.id}>
-                <Td>{item.id}</Td>
+                <Td>{startIndex + index + 1}</Td>
                 <Td>{item.name}</Td>
                 <Td>{item.phone}</Td>
                 <Td title={item.address}>{item.address}</Td>
@@ -432,35 +601,78 @@ function IntegratedSensorMonitoring() {
         </Table>
       </TableContainer>
 
-      <PaginationContainer>
-        <PageButton onClick={() => handlePageChange(1)}>
-          <img src={firstPageIcon} alt="첫 페이지" />
-        </PageButton>
-        <PageButton
-          onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+      {/* 데이터가 없을 때 메시지 표시 */}
+      {filteredData.length === 0 && (
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '40px',
+            color: '#666',
+            fontSize: '16px',
+          }}
         >
-          <img src={previousPageIcon} alt="이전 페이지" />
-        </PageButton>
+          표시할 데이터가 없습니다.
+        </div>
+      )}
 
-        {[1, 2, 3, 4, 5].map(page => (
+      {/* 페이지네이션 - 2페이지 이상일 때만 표시 */}
+      {totalPages > 1 && (
+        <PaginationContainer>
           <PageButton
-            key={page}
-            active={page === currentPage}
-            onClick={() => handlePageChange(page)}
+            onClick={() => handlePageChange(1)}
+            disabled={currentPage === 1}
           >
-            {page}
+            <img src={firstPageIcon} alt="첫 페이지" />
           </PageButton>
-        ))}
+          <PageButton
+            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+          >
+            <img src={previousPageIcon} alt="이전 페이지" />
+          </PageButton>
 
-        <PageButton
-          onClick={() => handlePageChange(Math.min(5, currentPage + 1))}
+          {generatePageNumbers().map(page => (
+            <PageButton
+              key={page}
+              active={page === currentPage}
+              onClick={() => handlePageChange(page)}
+            >
+              {page}
+            </PageButton>
+          ))}
+
+          <PageButton
+            onClick={() =>
+              handlePageChange(Math.min(totalPages, currentPage + 1))
+            }
+            disabled={currentPage === totalPages}
+          >
+            <img src={nextPageIcon} alt="다음 페이지" />
+          </PageButton>
+          <PageButton
+            onClick={() => handlePageChange(totalPages)}
+            disabled={currentPage === totalPages}
+          >
+            <img src={lastPageIcon} alt="마지막 페이지" />
+          </PageButton>
+        </PaginationContainer>
+      )}
+
+      {/* 페이지 정보 표시 */}
+      {totalPages > 1 && (
+        <div
+          style={{
+            textAlign: 'center',
+            marginTop: '10px',
+            fontSize: '14px',
+            color: '#666',
+          }}
         >
-          <img src={nextPageIcon} alt="다음 페이지" />
-        </PageButton>
-        <PageButton onClick={() => handlePageChange(5)}>
-          <img src={lastPageIcon} alt="마지막 페이지" />
-        </PageButton>
-      </PaginationContainer>
+          전체 {totalItems}개 중 {startIndex + 1}-
+          {Math.min(endIndex, totalItems)}개 표시 (페이지 {currentPage}/
+          {totalPages})
+        </div>
+      )}
     </MonitoringContainer>
   );
 }

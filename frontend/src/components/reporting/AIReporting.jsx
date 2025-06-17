@@ -188,6 +188,26 @@ const ReportButton = styled.button`
   }
 `;
 
+const AIButton = styled.button`
+  padding: 8px 20px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  font-family: 'NanumSquareRound', sans-serif;
+
+  &:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+
+  &:hover:not(:disabled) {
+    background-color: #2980b9;
+  }
+`;
+
 const CancelButton = styled.button`
   padding: 8px 20px;
   background-color: #f5f5f5;
@@ -243,16 +263,53 @@ const HouseholdInfo = styled.div`
   }
 `;
 
-const AIReporting = ({ selectedRiskEntry }) => {
+const AIReporting = ({ selectedRiskEntry, onReportSubmitted }) => {
   // 상태 관리
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [aiResponse, setAiResponse] = useState(null);
   const [reportingDocument, setReportingDocument] = useState(null);
+  const [submittedHouseholds, setSubmittedHouseholds] = useState(new Set());
   const [formData, setFormData] = useState({
-    manager: '정승환',
+    manager: '박지형',
     report: '',
   });
+
+  // 상태 텍스트 변환 함수
+  const getStatusText = (statusCode, householdId) => {
+    if (submittedHouseholds.has(householdId)) {
+      return '처리 중';
+    }
+
+    switch (statusCode) {
+      case 0:
+        return '접수';
+      case 1:
+        return '처리 중';
+      case 2:
+        return '완료';
+      default:
+        return '미처리';
+    }
+  };
+
+  // 상태에 따른 색상 함수
+  const getStatusColor = (statusCode, householdId) => {
+    if (submittedHouseholds.has(householdId)) {
+      return '#ff9800'; // 주황색 (처리 중)
+    }
+
+    switch (statusCode) {
+      case 0:
+        return '#2196f3'; // 파란색 (접수)
+      case 1:
+        return '#ff9800'; // 주황색 (처리 중)
+      case 2:
+        return '#4caf50'; // 초록색 (완료)
+      default:
+        return '#757575'; // 회색 (미처리)
+    }
+  };
 
   // 선택된 위험 내역이 변경될 때 초기화 및 자동 분석
   useEffect(() => {
@@ -321,8 +378,8 @@ const AIReporting = ({ selectedRiskEntry }) => {
     }
   };
 
-  // 신고 문서 생성 및 신고 버튼 클릭 핸들러
-  const handleReport = async () => {
+  // AI 보고서 생성 (기존 handleReport)
+  const handleGenerateReport = async () => {
     if (!selectedRiskEntry || !aiResponse) {
       setError('분석 결과가 없습니다.');
       return;
@@ -356,11 +413,6 @@ const AIReporting = ({ selectedRiskEntry }) => {
 
       const reportingDocument = await response.json();
       console.log('신고 문서 생성 완료:', reportingDocument);
-      console.log(
-        'immediateActions 필드 확인:',
-        reportingDocument.immediateActions
-      );
-      console.log('전체 필드 목록:', Object.keys(reportingDocument));
 
       setReportingDocument(reportingDocument);
 
@@ -389,6 +441,66 @@ const AIReporting = ({ selectedRiskEntry }) => {
     }
   };
 
+  // 최종 신고 제출 (상태 업데이트 포함)
+  const handleFinalSubmit = async () => {
+    if (!selectedRiskEntry || !formData.report.trim()) {
+      setError('신고 내용이 없습니다.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const finalReport = {
+        householdId: selectedRiskEntry.householdId,
+        managerId: 1,
+        agencyName: aiResponse?.reportingAgency || '119소방서',
+        reportContent: formData.report,
+      };
+
+      const baseURL =
+        import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+      const response = await fetch(
+        `${baseURL}/api/ai-reporting/submit-final-report`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(finalReport),
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // 성공 시 해당 가구를 처리 중 상태로 추가
+        setSubmittedHouseholds(
+          prev => new Set([...prev, selectedRiskEntry.householdId])
+        );
+
+        alert(
+          `신고가 성공적으로 접수되었습니다.\n신고번호: ${result.reportId}\n신고기관: ${result.agencyName || finalReport.agencyName}`
+        );
+        handleCancel(); // 폼 초기화
+
+        // 부모 컴포넌트에 상태 변경 알림 (위험 의심 내역 새로고침)
+        if (onReportSubmitted) {
+          onReportSubmitted(selectedRiskEntry.householdId);
+        }
+      } else {
+        throw new Error(result.message || '신고 제출 실패');
+      }
+    } catch (error) {
+      console.error('신고 접수 실패:', error);
+      setError(`신고 접수 중 오류가 발생했습니다: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 취소 버튼 클릭 핸들러
   const handleCancel = () => {
     setFormData({
@@ -409,28 +521,7 @@ const AIReporting = ({ selectedRiskEntry }) => {
     }));
   };
 
-  // 신고 문서에서 즉시 조치사항 추출 함수
-  const extractImmediateActions = reportingDocument => {
-    if (!reportingDocument) return null;
-
-    // immediateActions 필드가 있으면 사용
-    if (reportingDocument.immediateActions) {
-      return reportingDocument.immediateActions;
-    }
-
-    // 전체 텍스트에서 [즉시 조치사항] 부분 추출
-    const fullText =
-      reportingDocument.detailedSituation || reportingDocument.summary || '';
-    const immediateActionsMatch = fullText.match(
-      /\[즉시 조치사항\]([\s\S]*?)(?:\[|$)/
-    );
-
-    if (immediateActionsMatch && immediateActionsMatch[1]) {
-      return immediateActionsMatch[1].trim();
-    }
-
-    return null;
-  };
+  // 날짜 포맷팅 함수
   const formatDateTime = dateString => {
     if (!dateString) return '';
     try {
@@ -481,6 +572,24 @@ const AIReporting = ({ selectedRiskEntry }) => {
           </p>
           <p>
             <strong>담당자:</strong> {selectedRiskEntry.managerName}
+          </p>
+          <p>
+            <strong>처리 상태:</strong>
+            <span
+              style={{
+                color: getStatusColor(
+                  selectedRiskEntry.statusCode,
+                  selectedRiskEntry.householdId
+                ),
+                fontWeight: 'bold',
+                marginLeft: '8px',
+              }}
+            >
+              {getStatusText(
+                selectedRiskEntry.statusCode,
+                selectedRiskEntry.householdId
+              )}
+            </span>
           </p>
         </HouseholdInfo>
       )}
@@ -565,15 +674,6 @@ const AIReporting = ({ selectedRiskEntry }) => {
               <LoadingMessage>
                 AWS AI가 대응 지침을 생성하고 있습니다...
               </LoadingMessage>
-            ) : aiResponse && aiResponse.recommendation ? (
-              <GuideList>
-                {aiResponse.recommendation
-                  .split('\n')
-                  .filter(item => item.trim())
-                  .map((item, index) => (
-                    <p key={index}>{item}</p>
-                  ))}
-              </GuideList>
             ) : reportingDocument && reportingDocument.immediateActions ? (
               <GuideList>
                 {reportingDocument.immediateActions
@@ -590,6 +690,15 @@ const AIReporting = ({ selectedRiskEntry }) => {
                     return <p key={index}>{item}</p>;
                   })
                   .filter(Boolean)}
+              </GuideList>
+            ) : aiResponse && aiResponse.recommendation ? (
+              <GuideList>
+                {aiResponse.recommendation
+                  .split('\n')
+                  .filter(item => item.trim())
+                  .map((item, index) => (
+                    <p key={index}>{item}</p>
+                  ))}
               </GuideList>
             ) : (
               <GuideList>
@@ -678,11 +787,17 @@ const AIReporting = ({ selectedRiskEntry }) => {
                 />
               </FormRow>
               <FormButtons>
-                <ReportButton
-                  onClick={handleReport}
+                <AIButton
+                  onClick={handleGenerateReport}
                   disabled={loading || !aiResponse}
                 >
-                  {loading ? '문서 생성 중...' : '신고'}
+                  {loading ? '문서 생성 중...' : 'AI 작성'}
+                </AIButton>
+                <ReportButton
+                  onClick={handleFinalSubmit}
+                  disabled={loading || !formData.report.trim()}
+                >
+                  신고
                 </ReportButton>
                 <CancelButton onClick={handleCancel}>취소</CancelButton>
               </FormButtons>

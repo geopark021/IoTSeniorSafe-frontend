@@ -148,7 +148,10 @@ const DebugInfo = styled.div`
   font-family: monospace;
 `;
 
-const SuspiciousRiskEntries = ({ onRowClick }) => {
+const SuspiciousRiskEntries = ({
+  onRowClick,
+  submittedHouseholds = new Set(),
+}) => {
   const [riskEntries, setRiskEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -288,6 +291,21 @@ const SuspiciousRiskEntries = ({ onRowClick }) => {
     }
   };
 
+  // 신고 완료 후 목록 새로고침 함수
+  const handleReportSubmitted = householdId => {
+    // 위험 의심 내역 새로고침
+    fetchRiskEntries();
+
+    // 또는 해당 가구만 상태 업데이트
+    setRiskEntries(prevEntries =>
+      prevEntries.map(entry =>
+        entry.householdId === householdId
+          ? { ...entry, statusCode: 1 } // 처리 중으로 변경
+          : entry
+      )
+    );
+  };
+
   const handleRowClick = entry => {
     console.log('행 클릭:', entry);
     if (onRowClick) {
@@ -309,35 +327,41 @@ const SuspiciousRiskEntries = ({ onRowClick }) => {
     fetchRiskEntries();
   };
 
-  // 상태 코드를 한국어로 변환
-  const getStatusText = statusCode => {
+  // 상태 코드를 한국어로 변환 (신고 후 상태 고려)
+  const getStatusText = (statusCode, householdId) => {
+    // 신고 완료된 가구 확인
+    if (submittedHouseholds.has(householdId)) {
+      return '처리 중';
+    }
+
     switch (statusCode) {
       case 0:
         return '접수';
       case 1:
-        return '출동중';
+        return '처리 중';
       case 2:
-        return '처리중';
-      case 3:
         return '완료';
       default:
-        return '알수없음';
+        return '미처리';
     }
   };
 
-  // 상태에 따른 배지 스타일
-  const getStatusBadgeStyle = statusCode => {
+  // 상태에 따른 배지 스타일 (신고 후 상태 고려)
+  const getStatusBadgeStyle = (statusCode, householdId) => {
+    // 신고 완료된 가구 확인
+    if (submittedHouseholds.has(householdId)) {
+      return { backgroundColor: '#d1ecf1', color: '#0c5460' }; // 처리 중
+    }
+
     switch (statusCode) {
       case 0:
         return { backgroundColor: '#fff3cd', color: '#856404' }; // 접수
       case 1:
-        return { backgroundColor: '#d1ecf1', color: '#0c5460' }; // 출동중
+        return { backgroundColor: '#d1ecf1', color: '#0c5460' }; // 처리 중
       case 2:
-        return { backgroundColor: '#d4edda', color: '#155724' }; // 처리중
-      case 3:
-        return { backgroundColor: '#f8d7da', color: '#721c24' }; // 완료
+        return { backgroundColor: '#d4edda', color: '#155724' }; // 완료
       default:
-        return { backgroundColor: '#e2e3e5', color: '#383d41' };
+        return { backgroundColor: '#e2e3e5', color: '#383d41' }; // 미처리
     }
   };
 
@@ -436,8 +460,12 @@ const SuspiciousRiskEntries = ({ onRowClick }) => {
             ) : (
               riskEntries.map(entry => (
                 <Row
-                  key={entry.reportId}
-                  $statusCode={entry.statusCode}
+                  key={entry.reportId || entry.householdId}
+                  $statusCode={
+                    submittedHouseholds.has(entry.householdId)
+                      ? 1
+                      : entry.statusCode
+                  }
                   $riskLevel={entry.riskLevel}
                   onClick={() => handleRowClick(entry)}
                 >
@@ -477,8 +505,13 @@ const SuspiciousRiskEntries = ({ onRowClick }) => {
                     )}
                   </Td>
                   <Td>
-                    <StatusBadge style={getStatusBadgeStyle(entry.statusCode)}>
-                      {getStatusText(entry.statusCode)}
+                    <StatusBadge
+                      style={getStatusBadgeStyle(
+                        entry.statusCode,
+                        entry.householdId
+                      )}
+                    >
+                      {getStatusText(entry.statusCode, entry.householdId)}
                     </StatusBadge>
                     {entry.agencyName && (
                       <div

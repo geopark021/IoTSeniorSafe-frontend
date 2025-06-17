@@ -116,10 +116,10 @@ function Sidebar() {
   return (
     <SidebarContainer>
       <MenuItems>
-        <MenuItem to="/dashboard">
+        {/* <MenuItem to="/dashboard">
           <IconImg src={dashboardIcon} alt="대시보드" />
           <MenuText>대시보드</MenuText>
-        </MenuItem>
+        </MenuItem> */}
 
         <MenuItem to="/monitoring">
           <IconImg src={monitoringIcon} alt="모니터링" />
